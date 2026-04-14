@@ -2,7 +2,8 @@ name: "Blog SEO Front Matter"
 description: "Optimize a prompt that generates SEO-compliant front matter for aminrj.com (Chirpy/Jekyll)"
 
 batch_size: 5          # posts per cycle (5 fixed validation + 0 rotating)
-interval_seconds: 90
+interval_seconds: 10
+patience: 10           # stop after this many consecutive cycles without improvement
 
 # What's being optimized: the prompt Claude uses to suggest SEO improvements
 # What's measured: 5 binary SEO criteria on Claude's suggestions
@@ -45,7 +46,7 @@ criteria:
 
   - id: single_h1
     label: "Single H1"
-    description: "the suggestion recommends exactly one H1 heading (Chirpy renders title as H1)"
+    description: "h1_count is 0 — Chirpy renders the front-matter title as the page H1, so the post body must have zero additional H1 headings"
 
   - id: images_have_alt
     label: "Images have alt"

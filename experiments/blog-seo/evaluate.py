@@ -76,9 +76,11 @@ def evaluate(artifact) -> dict:
         h1_ok = False
         failures.append("h1_count not provided in suggestion")
     else:
-        h1_ok = int(h1_count) == 1
+        # Chirpy renders the front-matter title as the page H1, so the post
+        # body should have 0 additional H1s for correct single-H1 SEO.
+        h1_ok = int(h1_count) == 0
         if not h1_ok:
-            failures.append(f"h1_count should be 1, got {h1_count}")
+            failures.append(f"h1_count should be 0 (Chirpy title = H1), got {h1_count}")
 
     # ── 4. Images have descriptive alt text ───────────────────────
     alt_texts = artifact.get("alt_texts", [])

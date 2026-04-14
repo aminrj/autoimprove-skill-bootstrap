@@ -205,6 +205,13 @@ def run_cycle(experiment_dir: Path, config: dict,
             if artifact is not None:
                 artifacts.append((i, topic, artifact))
                 label = Path(topic).name if os.path.exists(topic) else topic[:50]
+                # Persist artifact so it can be inspected after the run
+                artifact_dir = data_dir / "artifacts" / f"run-{run_num}"
+                artifact_dir.mkdir(parents=True, exist_ok=True)
+                artifact_file = artifact_dir / (Path(topic).stem + ".json")
+                artifact_file.write_text(
+                    json.dumps(artifact, indent=2, ensure_ascii=False)
+                )
                 print(f"    [{i+1}/{len(batch)}] ok: {label}")
             else:
                 print(f"    [{i+1}/{len(batch)}] FAILED")
@@ -316,14 +323,21 @@ def run_loop(experiment_dir: Path, config: dict, generate_fn, evaluate_fn,
     cycle_seconds = config.get("interval_seconds", 120)
     n_criteria = len(config["criteria"])
     batch_size = config.get("batch_size", 10)
+    max_score = n_criteria * batch_size
+    patience = config.get("patience", 0)  # 0 = disabled
 
     print(f"\n{config['name']}")
-    print(f"  Criteria:   {n_criteria} × {batch_size} = {n_criteria * batch_size} max")
+    print(f"  Criteria:   {n_criteria} × {batch_size} = {max_score} max")
     print(f"  Interval:   {cycle_seconds}s")
-    print(f"  State:      run {state['run_number']}, best {state['best_score']}/{n_criteria * batch_size}")
+    if patience:
+        print(f"  Patience:   {patience} cycles without improvement")
+    print(f"  State:      run {state['run_number']}, best {state['best_score']}/{max_score}")
 
     limit = 1 if once else (max_cycles or float("inf"))
     i = 0
+    cycles_without_improvement = 0
+    last_best = state["best_score"]
+
     while i < limit:
         start = time.time()
         try:
@@ -344,6 +358,17 @@ def run_loop(experiment_dir: Path, config: dict, generate_fn, evaluate_fn,
 
         elapsed = time.time() - start
         i += 1
+
+        # Early stopping: check patience
+        if patience and not once:
+            if state["best_score"] > last_best:
+                cycles_without_improvement = 0
+                last_best = state["best_score"]
+            else:
+                cycles_without_improvement += 1
+            if cycles_without_improvement >= patience:
+                print(f"\n  EARLY STOP: no improvement for {patience} consecutive cycles.")
+                break
 
         if i < limit:
             wait = max(0, cycle_seconds - elapsed)

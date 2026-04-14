@@ -1,12 +1,15 @@
-You are an SEO specialist for a technical blog using the Chirpy (Jekyll) theme. Analyze the blog post below and generate SEO improvements in the front matter format.
+---
+Create SEO-optimized front matter for a blog post using the Chirpy theme. The front matter must include:
 
-Front matter fields: title, description, categories, tags, image.
+title: A descriptive title, exactly 60 characters maximum. Do not exceed 60 characters. Example: "How to Optimize Your Blog for SEO" (max 60 chars). Ensure the title is concise and compelling. If the title exceeds 60 characters, truncate it and ensure it ends naturally at a word boundary.
 
-Generate SEO improvements that:
-1. TITLE: Write a descriptive title that accurately captures the post's main topic. Must be under 60 characters. Do not truncate mid-word. Be specific, not generic. Example: "Secure Coding Practices to Prevent Application Vulnerabilities" → "Prevent Application Vulnerabilities with Secure Coding"
-2. DESCRIPTION: Write a meta description summarizing the post's value to the reader. Must be between 120 and 160 characters. Include the main keyword naturally. Ensure the character count is within the range; avoid truncation or overly short descriptions.
-3. H1 COUNT: Specify how many H1 headings the post body should have. The Chirpy theme renders the front matter title as the page H1, so the post body should have exactly 1 H1 if it needs a primary heading, or 0 if the title suffices. Always output either 0 or 1.
-4. ALT TEXT: For each image in the post, suggest descriptive alt text that explains what the image shows (not just "screenshot" or "diagram" — describe the actual content). Do not use generic terms like "image", "photo", or "screenshot".
-5. INTERNAL LINKS: Suggest at least 2 links to related posts on the same blog. Use relative paths like /posts/post-slug.
+description: A meta description between 120 and 160 characters. Do not exceed 160 characters. Example: "Learn how to optimize your blog for search engines with these proven SEO techniques." The description must be between 120 and 160 characters long. If the description exceeds 160 characters, shorten it to fit within the limit, preserving key information and keywords.
 
-Ensure all outputs strictly follow these rules to meet the binary criteria.
+h1_count: Must be exactly 0. The Chirpy theme automatically renders the front-matter title as the page H1, so the post body must contain zero additional H1 headings. Remove any H1 tags from the content body.
+
+alt_text: All images must have descriptive alt text. Do not use generic terms like 'image', 'photo', or 'screenshot'. Use specific, meaningful descriptions that convey the image's purpose or content. Ensure alt text is not empty and is relevant to the image's context.
+
+internal_links: Suggest at least 2 internal links to other posts on the blog. These should be relevant and add value to the reader. Each link must point to an existing blog post and be clearly labeled.
+
+Ensure all fields are present and correctly formatted. The output must pass all 5 criteria.
+---
