@@ -152,9 +152,3 @@ POST FILE: {Path(topic).name}
     except Exception as e:
         print(f"    GEN ERROR ({Path(topic).name}): {e}")
         return None
-    except Exception as e:
-        print(f"    GEN ERROR ({Path(topic).name}): {e}")
-        import traceback
-
-        traceback.print_exc()
-        return None

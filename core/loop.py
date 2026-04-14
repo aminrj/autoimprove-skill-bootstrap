@@ -127,19 +127,32 @@ def _mutation_prompt(config: dict, current_prompt: str, scores_per_criterion: di
 
 def _call_mutation(config: dict, current_prompt: str, scores_per_criterion: dict,
                    all_failures: list[str], best_score: int) -> str:
-    """Ask Claude to rewrite the prompt based on failure analysis."""
-    import anthropic
-    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-
-    mutate_model = config.get("mutator", {}).get("model", "claude-sonnet-4-6")
+    """Rewrite the prompt based on failure analysis. Supports anthropic or ollama."""
+    mutator_cfg = config.get("mutator", {})
+    provider = mutator_cfg.get("provider", "anthropic")
+    model = mutator_cfg.get("model", "claude-sonnet-4-6")
+    endpoint = mutator_cfg.get("endpoint", "http://localhost:11434")
     prompt = _mutation_prompt(config, current_prompt, scores_per_criterion, all_failures, best_score)
 
-    response = client.messages.create(
-        model=mutate_model,
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return response.content[0].text.strip()
+    if provider == "ollama":
+        from ollama import Client
+        client = Client(host=endpoint)
+        response = client.chat(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            stream=False,
+            options={"temperature": 0.5},
+        )
+        return response["message"]["content"].strip()
+    else:
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        response = client.messages.create(
+            model=model,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text.strip()
 
 
 def run_cycle(experiment_dir: Path, config: dict,

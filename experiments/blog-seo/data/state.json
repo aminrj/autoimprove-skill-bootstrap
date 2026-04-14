@@ -1,6 +1,6 @@
 {
-  "best_score": -1,
-  "run_number": 10,
+  "best_score": 18,
+  "run_number": 12,
   "validation_set": [
     "/home/amine/git/local-llms/autoimprove-skill-bootstrap/experiments/blog-seo/data/posts/test-post-3.md",
     "/home/amine/git/local-llms/autoimprove-skill-bootstrap/experiments/blog-seo/data/posts/test-post-2.md",

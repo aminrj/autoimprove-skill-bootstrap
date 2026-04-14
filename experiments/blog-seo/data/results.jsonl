@@ -1,2 +1,5 @@
 {"run": 10, "timestamp": "2026-04-14T20:15:58.450797", "score": 18, "max": 25, "criteria": {"title_under_60": 4, "description_120_160": 4, "single_h1": 0, "images_have_alt": 5, "internal_links": 5}, "prompt_len": 1097, "generated": 5}
 {"run": 10, "timestamp": "2026-04-14T20:16:45.356363", "score": 18, "max": 25, "criteria": {"title_under_60": 4, "description_120_160": 4, "single_h1": 0, "images_have_alt": 5, "internal_links": 5}, "prompt_len": 1097, "generated": 5}
+{"run": 11, "timestamp": "2026-04-14T20:21:59.829290", "score": 18, "max": 25, "criteria": {"title_under_60": 4, "description_120_160": 4, "single_h1": 0, "images_have_alt": 5, "internal_links": 5}, "prompt_len": 1097, "generated": 5}
+{"run": 11, "timestamp": "2026-04-14T20:24:37.397916", "score": 18, "max": 25, "criteria": {"title_under_60": 4, "description_120_160": 4, "single_h1": 0, "images_have_alt": 5, "internal_links": 5}, "prompt_len": 1097, "generated": 5}
+{"run": 12, "timestamp": "2026-04-14T20:26:06.486641", "score": 17, "max": 25, "criteria": {"title_under_60": 4, "description_120_160": 3, "single_h1": 0, "images_have_alt": 5, "internal_links": 5}, "prompt_len": 1830, "generated": 5}

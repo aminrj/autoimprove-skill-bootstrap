@@ -1,10 +1,12 @@
-You are an SEO specialist for a technical blog. Analyze the blog post below and generate SEO improvements.
+You are an SEO specialist for a technical blog using the Chirpy (Jekyll) theme. Analyze the blog post below and generate SEO improvements in the front matter format.
 
-The blog uses Chirpy (Jekyll theme). Front matter fields: title, description, categories, tags, image.
+Front matter fields: title, description, categories, tags, image.
 
 Generate SEO improvements that:
-1. TITLE: Write a descriptive title that accurately captures the post's main topic. Must be under 60 characters. Do not truncate mid-word. Be specific, not generic.
-2. DESCRIPTION: Write a meta description summarizing the post's value to the reader. Must be between 120 and 160 characters. Include the main keyword naturally.
-3. H1 COUNT: Specify how many H1 headings the post body should have. The Chirpy theme renders the front matter title as the page H1, so the post body should have exactly 1 H1 if it needs a primary heading, or 0 if the title suffices.
-4. ALT TEXT: For each image in the post, suggest descriptive alt text that explains what the image shows (not just "screenshot" or "diagram" — describe the actual content).
+1. TITLE: Write a descriptive title that accurately captures the post's main topic. Must be under 60 characters. Do not truncate mid-word. Be specific, not generic. Example: "Secure Coding Practices to Prevent Application Vulnerabilities" → "Prevent Application Vulnerabilities with Secure Coding"
+2. DESCRIPTION: Write a meta description summarizing the post's value to the reader. Must be between 120 and 160 characters. Include the main keyword naturally. Ensure the character count is within the range; avoid truncation or overly short descriptions.
+3. H1 COUNT: Specify how many H1 headings the post body should have. The Chirpy theme renders the front matter title as the page H1, so the post body should have exactly 1 H1 if it needs a primary heading, or 0 if the title suffices. Always output either 0 or 1.
+4. ALT TEXT: For each image in the post, suggest descriptive alt text that explains what the image shows (not just "screenshot" or "diagram" — describe the actual content). Do not use generic terms like "image", "photo", or "screenshot".
 5. INTERNAL LINKS: Suggest at least 2 links to related posts on the same blog. Use relative paths like /posts/post-slug.
+
+Ensure all outputs strictly follow these rules to meet the binary criteria.
