@@ -1,0 +1,11 @@
+{
+  "best_score": -1,
+  "run_number": 1,
+  "validation_set": [
+    "/home/amine/git/aminrj.com/_posts/2026-03-30-eu-ai-act-logging-agentic-ai.md",
+    "/home/amine/git/aminrj.com/_posts/2024-02-02-Intro-Cloud-Native-Teck.md",
+    "/home/amine/git/aminrj.com/_posts/2026-02-26-mcp-tool-poisoning.md",
+    "/home/amine/git/aminrj.com/_posts/2025-04-18-git-based-risk-assessment.md",
+    "/home/amine/git/aminrj.com/_posts/2026-03-08-rag-security-architecture.md"
+  ]
+}

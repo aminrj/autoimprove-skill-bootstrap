@@ -15,16 +15,19 @@ source:
   sample_size: 8                    # total posts per cycle
 
 generator:
-  provider: anthropic
-  model: claude-sonnet-4-6
+  # provider: anthropic
+  # model: claude-sonnet-4-6
   # To use a local model instead:
-  # provider: ollama
-  # model: llama3.2:latest
-  # endpoint: http://localhost:11434
+  provider: ollama
+  model: qwen3-coder:30b
+  endpoint: http://localhost:11434
 
 evaluator:
-  provider: anthropic
-  model: claude-sonnet-4-6   # eval isolation: separate call, never sees the optimization prompt
+  # provider: anthropic
+  # model: claude-sonnet-4-6   # eval isolation: separate call, never sees the optimization prompt
+  provider: ollama
+  model: qwen3-coder:30b
+  endpoint: http://localhost:11434
 
 mutator:
   model: claude-sonnet-4-6
