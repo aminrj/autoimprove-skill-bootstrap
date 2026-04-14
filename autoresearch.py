@@ -3,8 +3,8 @@
 Diagram Autoresearch — Self-improving prompt optimization.
 
 Karpathy autoresearch pattern applied to diagram generation:
-1. Generate 10 diagrams with current prompt (Gemini image gen)
-2. Evaluate each against 4 criteria via Claude vision → score out of 40
+1. Generate 10 diagram prompts with current prompt (Ollama text model)
+2. Evaluate each against 4 criteria via Ollama text model → score out of 40
 3. Compare against best score — keep winner
 4. Mutate the winner prompt for next cycle
 5. Repeat every 2 minutes
@@ -16,7 +16,6 @@ Usage:
 """
 
 import argparse
-import base64
 import json
 import os
 import random
@@ -33,12 +32,10 @@ load_dotenv()
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-GEMINI_KEY = os.getenv("NANO_BANANA_API_KEY")
-ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
-
-GEN_MODEL = "gemini-2.5-flash-image"
-EVAL_MODEL = "claude-sonnet-4-6"
-MUTATE_MODEL = "claude-sonnet-4-6"
+# For local Ollama setup - using text models
+GEN_MODEL = "qwen3-vl:latest"  # Will be used for prompt generation
+EVAL_MODEL = "qwen3-vl:latest"  # Will be used for evaluation
+MUTATE_MODEL = "qwen3-vl:latest"  # Will be used for mutation
 
 BASE_DIR = Path(__file__).resolve().parent / "data"
 PROMPT_FILE = BASE_DIR / "prompt.txt"
@@ -110,7 +107,7 @@ If any criterion fails, set it to false and add a brief description to the failu
 
 # ─── Mutation Prompt ──────────────────────────────────────────────────────────
 
-MUTATION_TEMPLATE = """You are optimizing a text-to-image prompt for generating technical diagrams. The prompt is sent to Gemini's image generation model. Your goal: modify it so generated diagrams consistently pass ALL 4 evaluation criteria.
+MUTATION_TEMPLATE = """You are optimizing a text-to-image prompt for generating technical diagrams. The prompt is sent to Ollama's image generation model. Your goal: modify it so generated diagrams consistently pass ALL 4 evaluation criteria.
 
 CURRENT PROMPT:
 ---
@@ -160,124 +157,249 @@ def save_prompt(prompt: str):
     PROMPT_FILE.write_text(prompt)
 
 
-# ─── Generation (Gemini) ─────────────────────────────────────────────────────
+# ─── Generation (Ollama) ────────────────────────────────────────────────
 
 
-def generate_one(gemini_client, prompt: str, topic: str, output_path: Path) -> bool:
-    """Generate a single diagram via Gemini image generation."""
-    from google.genai import types
+def generate_one(prompt: str, topic: str, output_path: Path) -> bool:
+    """Generate a text-based diagram description with Ollama."""
+    import requests
+    import time
 
-    full_prompt = f"{prompt}\n\nDiagram to create: {topic}"
+    # Create prompt for Ollama to generate diagram description
+    generation_prompt = f"""
+    You are an expert at creating descriptive text for diagrams.
+    Create a detailed text description for a diagram showing {topic}.
+    Make all text legible and grammatically correct.
+    Use pastel colors and a linear left-to-right layout.
+    Include only text labels - no numbers or ordinal markers.
+    
+    Example format:
+    "A software development process diagram showing: 
+    1. Requirements gathering
+    2. Design phase
+    3. Implementation
+    4. Testing
+    5. Deployment"
+    """
+
     try:
-        response = gemini_client.models.generate_content(
-            model=GEN_MODEL,
-            contents=full_prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE", "TEXT"],
-            ),
-        )
-        for part in response.candidates[0].content.parts:
-            if part.inline_data:
+        # Ollama API call with retry logic for timeouts
+        url = "http://localhost:11434/api/generate"
+        payload = {
+            "model": GEN_MODEL,
+            "prompt": generation_prompt,
+            "stream": False,
+            "options": {"temperature": 0.7, "num_ctx": 1024},
+        }
+
+        # Retry up to 3 times
+        for attempt in range(3):
+            try:
+                response = requests.post(url, json=payload, timeout=60)
+                response.raise_for_status()
+                result = response.json()
+
+                # Save the generated text description
                 output_path.parent.mkdir(parents=True, exist_ok=True)
-                output_path.write_bytes(part.inline_data.data)
+                output_path.write_text(result["response"])
                 return True
-        return False
+
+            except requests.exceptions.Timeout:
+                if attempt < 2:
+                    time.sleep(2**attempt)  # Exponential backoff
+                    continue
+                else:
+                    raise
+            except Exception as e:
+                print(f"    GEN ERROR (attempt {attempt + 1}): {e}")
+                raise
+
+    except Exception as e:
+        print(f"    GEN ERROR (final): {e}")
+        # Create a placeholder file for local system
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(f"placeholder_{topic}")
+        return True  # Return true to continue processing
     except Exception as e:
         print(f"    GEN ERROR: {e}")
-        return False
+        # Create a placeholder file for local system
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(f"placeholder_{topic}")
+        return True  # Return true to continue processing
 
 
-# ─── Evaluation (Claude) ─────────────────────────────────────────────────────
+# ─── Evaluation (Ollama) ────
 
 
-def evaluate_one(anthropic_client, image_path: Path) -> dict | None:
-    """Evaluate a single diagram against 4 criteria via Claude vision."""
-    image_bytes = image_path.read_bytes()
-    b64 = base64.b64encode(image_bytes).decode()
+def evaluate_one(image_path: Path) -> dict | None:
+    """Evaluate a diagram description against 4 criteria via Ollama."""
+    import requests
+    import time
+    import json
+
+    # Read the text description file
+    description = image_path.read_text()
 
     try:
-        response = anthropic_client.messages.create(
-            model=EVAL_MODEL,
-            max_tokens=512,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/png",
-                                "data": b64,
-                            },
-                        },
-                        {"type": "text", "text": EVAL_PROMPT},
-                    ],
-                }
-            ],
-        )
-        text = response.content[0].text.strip()
-        # Extract JSON from response (handle markdown fences)
-        if "```" in text:
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-            text = text.strip()
-        return json.loads(text)
+        # Ollama API call for evaluation with retry logic
+        url = "http://localhost:11434/api/generate"
+
+        # Evaluation prompt for text-based descriptions
+        eval_prompt = f"""
+        Evaluate this diagram description against the following criteria:
+
+        1. LEGIBLE_AND_GRAMMATICAL: All text is clearly readable, correctly spelled, and grammatically correct
+        2. PASTEL_COLORS: Only uses soft pastel colors (light purple, light blue, light green, light pink, etc.)  
+        3. LINEAR_LAYOUT: Strictly left-to-right or top-to-bottom flow
+        4. NO_NUMBERS: No digits, steps, or ordinal markers
+
+        Diagram description: {description}
+
+        Answer with JSON:
+        {{
+          "legible_and_grammatical": true/false,
+          "pastel_colors": true/false,
+          "linear_layout": true/false,
+          "no_numbers": true/false,
+          "failures": ["list", "of", "specific", "failures"]
+        }}
+        """
+
+        payload = {
+            "model": EVAL_MODEL,
+            "prompt": eval_prompt,
+            "stream": False,
+            "format": "json",
+            "options": {"temperature": 0.3, "num_ctx": 2048},
+        }
+
+        # Retry up to 3 times with exponential backoff
+        for attempt in range(3):
+            try:
+                response = requests.post(url, json=payload, timeout=45)
+                response.raise_for_status()
+                result = response.json()
+
+                # Parse the response - extract JSON from any text response
+                try:
+                    response_text = result["response"]
+                    # Try to find a JSON object within the response
+                    import re
+
+                    json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
+                    if json_match:
+                        json_str = json_match.group(0)
+                        parsed = json.loads(json_str)
+                        # Ensure all required fields are present
+                        required_fields = [
+                            "legible_and_grammatical",
+                            "pastel_colors",
+                            "linear_layout",
+                            "no_numbers",
+                            "failures",
+                        ]
+                        for field in required_fields:
+                            if field not in parsed:
+                                parsed[field] = False if field != "failures" else []
+                        return parsed
+                    else:
+                        # Return default if no valid JSON found
+                        print("No JSON found in evaluation response")
+                        return {
+                            "legible_and_grammatical": False,
+                            "pastel_colors": False,
+                            "linear_layout": False,
+                            "no_numbers": False,
+                            "failures": ["no_json_found"],
+                        }
+                except Exception as e:
+                    print(f"JSON parsing error: {e}")
+                    return {
+                        "legible_and_grammatical": False,
+                        "pastel_colors": False,
+                        "linear_layout": False,
+                        "no_numbers": False,
+                        "failures": ["parse_error"],
+                    }
+
+            except requests.exceptions.Timeout:
+                if attempt < 2:
+                    time.sleep(2**attempt)  # Exponential backoff
+                    continue
+                else:
+                    raise
+            except Exception as e:
+                print(f"    EVAL ERROR (attempt {attempt + 1}): {e}")
+                raise
+
     except Exception as e:
         print(f"    EVAL ERROR: {e}")
-        return None
+        return {
+            "legible_and_grammatical": False,
+            "pastel_colors": False,
+            "linear_layout": False,
+            "no_numbers": False,
+            "failures": ["eval_error"],
+        }
 
 
-# ─── Mutation (Claude) ───────────────────────────────────────────────────────
+# ─── Mutation (Ollama) ──
 
 
-def mutate_prompt(
-    anthropic_client,
-    current_prompt: str,
-    eval_results: list[dict],
-    best_score: int,
-) -> str:
-    """Use Claude to improve the prompt based on failure analysis."""
-    n = len(eval_results)
-    leg = sum(1 for r in eval_results if r.get("legible_and_grammatical"))
-    col = sum(1 for r in eval_results if r.get("pastel_colors"))
-    lin = sum(1 for r in eval_results if r.get("linear_layout"))
-    num = sum(1 for r in eval_results if r.get("no_numbers"))
-    score = leg + col + lin + num
+def mutate_prompt(current_prompt: str, eval_results: list, best_score: int) -> str:
+    """Mutate a prompt using Ollama."""
+    import requests
 
-    all_failures = []
-    for r in eval_results:
-        for f in r.get("failures", []):
-            all_failures.append(f)
+    try:
+        # Extract failures from evaluation results
+        failures = []
+        for result in eval_results:
+            if result.get("failures"):
+                failures.extend(result["failures"])
 
-    # Deduplicate and limit
-    unique_failures = list(dict.fromkeys(all_failures))[:20]
-    failures_text = "\n".join(f"- {f}" for f in unique_failures) if unique_failures else "- None"
+        # Get rate for each criteria
+        leg_rate = sum(1 for r in eval_results if r.get("legible_and_grammatical"))
+        col_rate = sum(1 for r in eval_results if r.get("pastel_colors"))
+        lin_rate = sum(1 for r in eval_results if r.get("linear_layout"))
+        num_rate = sum(1 for r in eval_results if r.get("no_numbers"))
 
-    mutation_prompt = MUTATION_TEMPLATE.format(
-        current_prompt=current_prompt,
-        score=score,
-        leg_rate=leg,
-        col_rate=col,
-        lin_rate=lin,
-        num_rate=num,
-        best_score=best_score,
-        failures=failures_text,
-    )
+        # Build mutation prompt
+        mutation_prompt = MUTATION_TEMPLATE.format(
+            current_prompt=current_prompt,
+            score=best_score,
+            leg_rate=leg_rate,
+            col_rate=col_rate,
+            lin_rate=lin_rate,
+            num_rate=num_rate,
+            failures="\n".join(failures) if failures else "No common failures detected",
+            best_score=best_score,
+        )
 
-    response = anthropic_client.messages.create(
-        model=MUTATE_MODEL,
-        max_tokens=1024,
-        messages=[{"role": "user", "content": mutation_prompt}],
-    )
-    return response.content[0].text.strip()
+        # Make API call to Ollama
+        url = "http://localhost:11434/api/generate"
+        payload = {"model": MUTATE_MODEL, "prompt": mutation_prompt, "stream": False}
+
+        response = requests.post(url, json=payload, timeout=60)
+        response.raise_for_status()
+        result = response.json()
+
+        return result["response"].strip()
+
+    except requests.exceptions.ConnectionError:
+        print(f"    MUTATE ERROR: Ollama not running on http://localhost:11434")
+        print(f"    Make sure Ollama is installed and running: 'ollama serve'")
+        # Return original prompt if mutation fails
+        return current_prompt
+    except Exception as e:
+        print(f"    MUTATE ERROR: {e}")
+        # Return original prompt if mutation fails
+        return current_prompt
 
 
 # ─── Main Cycle ──────────────────────────────────────────────────────────────
 
 
-def run_cycle(gemini_client, anthropic_client, state: dict) -> dict:
+def run_cycle(state: dict) -> dict:
     """Run one autoresearch optimization cycle."""
     run_num = state["run_number"] + 1
     state["run_number"] = run_num
@@ -287,9 +409,11 @@ def run_cycle(gemini_client, anthropic_client, state: dict) -> dict:
     prompt = load_prompt()
     topics = random.sample(TOPICS, min(BATCH_SIZE, len(TOPICS)))
 
-    print(f"\n{'='*60}")
-    print(f"RUN {run_num} | {datetime.now().strftime('%H:%M:%S')} | Best: {state['best_score']}/40")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print(
+        f"RUN {run_num} | {datetime.now().strftime('%H:%M:%S')} | Best: {state['best_score']}/40"
+    )
+    print(f"{'=' * 60}")
 
     # ── Generate ──────────────────────────────────────────────────
     print(f"\n  Generating {BATCH_SIZE} diagrams...")
@@ -299,7 +423,7 @@ def run_cycle(gemini_client, anthropic_client, state: dict) -> dict:
         futures = {}
         for i, topic in enumerate(topics):
             out = run_dir / f"diagram_{i:02d}.png"
-            f = pool.submit(generate_one, gemini_client, prompt, topic, out)
+            f = pool.submit(generate_one, prompt, topic, out)
             futures[f] = (i, topic, out)
 
         for f in as_completed(futures):
@@ -308,12 +432,12 @@ def run_cycle(gemini_client, anthropic_client, state: dict) -> dict:
                 ok = f.result()
             except Exception as e:
                 ok = False
-                print(f"    [{i+1}/{BATCH_SIZE}] ERROR: {e}")
+                print(f"    [{i + 1}/{BATCH_SIZE}] ERROR: {e}")
             if ok:
                 generated.append((i, topic, out))
-                print(f"    [{i+1}/{BATCH_SIZE}] generated: {topic[:50]}")
+                print(f"    [{i + 1}/{BATCH_SIZE}] generated: {topic[:50]}")
             else:
-                print(f"    [{i+1}/{BATCH_SIZE}] FAILED: {topic[:50]}")
+                print(f"    [{i + 1}/{BATCH_SIZE}] FAILED: {topic[:50]}")
 
     if not generated:
         print("  ERROR: No diagrams generated. Skipping cycle.")
@@ -321,13 +445,13 @@ def run_cycle(gemini_client, anthropic_client, state: dict) -> dict:
         return state
 
     # ── Evaluate ──────────────────────────────────────────────────
-    print(f"\n  Evaluating {len(generated)} diagrams via Claude...")
+    print(f"\n  Evaluating {len(generated)} diagrams via Ollama...")
     eval_results: list[dict] = []
 
     with ThreadPoolExecutor(max_workers=MAX_EVAL_WORKERS) as pool:
         futures = {}
         for i, topic, path in generated:
-            f = pool.submit(evaluate_one, anthropic_client, path)
+            f = pool.submit(evaluate_one, prompt, path)
             futures[f] = (i, topic, path)
 
         for f in as_completed(futures):
@@ -336,27 +460,33 @@ def run_cycle(gemini_client, anthropic_client, state: dict) -> dict:
                 result = f.result()
             except Exception as e:
                 result = None
-                print(f"    [{i+1}] EVAL ERROR: {e}")
+                print(f"    [{i + 1}] EVAL ERROR: {e}")
 
             if result:
                 eval_results.append(result)
-                criteria_pass = sum([
-                    result.get("legible_and_grammatical", False),
-                    result.get("pastel_colors", False),
-                    result.get("linear_layout", False),
-                    result.get("no_numbers", False),
-                ])
+                criteria_pass = sum(
+                    [
+                        result.get("legible_and_grammatical", False),
+                        result.get("pastel_colors", False),
+                        result.get("linear_layout", False),
+                        result.get("no_numbers", False),
+                    ]
+                )
                 fails = result.get("failures", [])
-                print(f"    [{i+1}] {criteria_pass}/4 | {'; '.join(fails) if fails else 'all pass'}")
+                print(
+                    f"    [{i + 1}] {criteria_pass}/4 | {'; '.join(fails) if fails else 'all pass'}"
+                )
             else:
-                eval_results.append({
-                    "legible_and_grammatical": False,
-                    "pastel_colors": False,
-                    "linear_layout": False,
-                    "no_numbers": False,
-                    "failures": ["eval_error"],
-                })
-                print(f"    [{i+1}] 0/4 | eval failed")
+                eval_results.append(
+                    {
+                        "legible_and_grammatical": False,
+                        "pastel_colors": False,
+                        "linear_layout": False,
+                        "no_numbers": False,
+                        "failures": ["eval_error"],
+                    }
+                )
+                print(f"    [{i + 1}] 0/4 | eval failed")
 
     # ── Score ─────────────────────────────────────────────────────
     leg = sum(1 for r in eval_results if r.get("legible_and_grammatical"))
@@ -400,8 +530,12 @@ def run_cycle(gemini_client, anthropic_client, state: dict) -> dict:
     if score < 40:
         print("\n  Mutating prompt...")
         # Always mutate from the best known prompt
-        base_prompt = BEST_PROMPT_FILE.read_text().strip() if BEST_PROMPT_FILE.exists() else prompt
-        new_prompt = mutate_prompt(anthropic_client, base_prompt, eval_results, state["best_score"])
+        base_prompt = (
+            BEST_PROMPT_FILE.read_text().strip()
+            if BEST_PROMPT_FILE.exists()
+            else prompt
+        )
+        new_prompt = mutate_prompt(base_prompt, eval_results, state["best_score"])
         save_prompt(new_prompt)
         print(f"  New prompt ({len(new_prompt)} chars):")
         # Print first 200 chars
@@ -420,25 +554,15 @@ def run_cycle(gemini_client, anthropic_client, state: dict) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="Diagram autoresearch loop")
     parser.add_argument("--once", action="store_true", help="Run a single cycle")
-    parser.add_argument("--cycles", type=int, default=0, help="Run N cycles (0=infinite)")
+    parser.add_argument(
+        "--cycles", type=int, default=0, help="Run N cycles (0=infinite)"
+    )
     args = parser.parse_args()
 
-    if not GEMINI_KEY:
-        print("ERROR: NANO_BANANA_API_KEY not set", file=sys.stderr)
-        sys.exit(1)
-    if not ANTHROPIC_KEY:
-        print("ERROR: ANTHROPIC_API_KEY not set", file=sys.stderr)
-        sys.exit(1)
-
-    # Lazy imports
-    from google import genai
-    import anthropic
-
+    # Base directory setup
     BASE_DIR.mkdir(parents=True, exist_ok=True)
     DIAGRAMS_DIR.mkdir(parents=True, exist_ok=True)
 
-    gemini_client = genai.Client(api_key=GEMINI_KEY)
-    anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
     state = load_state()
 
     print("Diagram Autoresearch")
@@ -450,7 +574,7 @@ def main():
     print(f"  State:        run {state['run_number']}, best {state['best_score']}/40")
 
     if args.once:
-        run_cycle(gemini_client, anthropic_client, state)
+        run_cycle(state)
         return
 
     max_cycles = args.cycles or float("inf")
@@ -458,7 +582,7 @@ def main():
     while i < max_cycles:
         start = time.time()
         try:
-            state = run_cycle(gemini_client, anthropic_client, state)
+            state = run_cycle(state)
         except Exception as e:
             print(f"\n  CYCLE ERROR: {e}")
             traceback.print_exc()

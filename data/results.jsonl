@@ -6,3 +6,8 @@
 {"run": 6, "timestamp": "2026-03-13T17:13:22.213445", "score": 40, "max": 40, "criteria": {"legible": 10, "pastel": 10, "linear": 10, "no_numbers": 10}, "prompt_len": 2184, "generated": 10}
 {"run": 7, "timestamp": "2026-03-13T17:15:27.562069", "score": 37, "max": 40, "criteria": {"legible": 7, "pastel": 10, "linear": 10, "no_numbers": 10}, "prompt_len": 2184, "generated": 10}
 {"run": 8, "timestamp": "2026-03-13T17:17:25.680619", "score": 37, "max": 40, "criteria": {"legible": 8, "pastel": 10, "linear": 10, "no_numbers": 9}, "prompt_len": 2307, "generated": 10}
+{"run": 9, "timestamp": "2026-04-13T20:55:17.336184", "score": 22, "max": 40, "criteria": {"legible": 6, "pastel": 6, "linear": 5, "no_numbers": 5}, "prompt_len": 613, "generated": 10}
+{"run": 10, "timestamp": "2026-04-13T21:50:31.367109", "score": 0, "max": 40, "criteria": {"legible": 0, "pastel": 0, "linear": 0, "no_numbers": 0}, "prompt_len": 250, "generated": 10}
+{"run": 11, "timestamp": "2026-04-13T21:58:57.967340", "score": 0, "max": 40, "criteria": {"legible": 0, "pastel": 0, "linear": 0, "no_numbers": 0}, "prompt_len": 2192, "generated": 10}
+{"run": 12, "timestamp": "2026-04-13T22:04:27.616174", "score": 0, "max": 40, "criteria": {"legible": 0, "pastel": 0, "linear": 0, "no_numbers": 0}, "prompt_len": 1953, "generated": 10}
+{"run": 13, "timestamp": "2026-04-13T22:10:23.594620", "score": 0, "max": 40, "criteria": {"legible": 0, "pastel": 0, "linear": 0, "no_numbers": 0}, "prompt_len": 2158, "generated": 10}
