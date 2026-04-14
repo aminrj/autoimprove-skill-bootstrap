@@ -1,0 +1,45 @@
+name: "Whiteboard Diagram Generation"
+description: "Optimize Gemini prompts for whiteboard-style technical diagrams"
+
+batch_size: 10
+interval_seconds: 120
+max_workers_generate: 3
+max_workers_evaluate: 5
+
+# What's being optimized: the prompt sent to Gemini image generation
+# What's measured: 4 binary visual criteria evaluated by Claude vision
+
+source:
+  type: list  # topics defined in evaluate.py (TOPICS constant)
+
+generator:
+  provider: gemini
+  model: gemini-2.5-flash-image
+  # To use a local model instead:
+  # provider: ollama
+  # model: llava:13b
+  # endpoint: http://localhost:11434
+
+evaluator:
+  provider: anthropic
+  model: claude-sonnet-4-6
+
+mutator:
+  model: claude-sonnet-4-6
+
+criteria:
+  - id: legible_and_grammatical
+    label: "Legible & Grammatical"
+    description: "All text is legible, not garbled, and grammatically correct"
+
+  - id: pastel_colors
+    label: "Pastel Colors"
+    description: "Only soft pastel colors used; white background permitted"
+
+  - id: linear_layout
+    label: "Linear Layout"
+    description: "Layout is strictly linear — left-to-right OR top-to-bottom only"
+
+  - id: no_numbers
+    label: "No Numbers"
+    description: "Zero digits, ordinals, or sequence numbers anywhere in the diagram"

@@ -1,0 +1,55 @@
+# ── Experiment config ────────────────────────────────────────────────────────
+# Copy this folder to experiments/your-experiment-name/ and fill in the TODOs.
+# The 3 things every autoimprove experiment needs:
+#   1. Something to optimize  (prompt.txt)
+#   2. Something to measure   (binary criteria below)
+#   3. Something to change    (generate.py produces artifacts, evaluate.py scores them)
+
+name: "TODO: Your Experiment Name"
+description: "TODO: One-sentence description of what you're optimizing"
+
+batch_size: 10          # items evaluated per cycle
+interval_seconds: 120   # pause between cycles
+
+# ── Source: where topics come from ───────────────────────────────────────────
+source:
+  # Option A: a hardcoded list in evaluate.py (for generated content)
+  type: list
+
+  # Option B: scan a local directory of files
+  # type: local_files
+  # path: "~/path/to/your/files"
+  # pattern: "*.md"
+  # validation_set_size: 5   # fixed posts for apples-to-apples comparison
+  # sample_size: 10
+
+# ── Models ────────────────────────────────────────────────────────────────────
+generator:
+  provider: anthropic    # anthropic | gemini | ollama | openai
+  model: claude-sonnet-4-6
+  # endpoint: http://localhost:11434  # for Ollama / local LLMs on RTX 3090
+
+evaluator:
+  provider: anthropic
+  model: claude-sonnet-4-6   # eval isolation: keep separate from generator
+
+mutator:
+  model: claude-sonnet-4-6   # rewrites the prompt based on failures
+
+# ── Criteria: what does "good" look like? ────────────────────────────────────
+# Define 3-6 binary (yes/no) criteria. The scoring is:
+#   batch_size × number_of_criteria = max score
+# Simpler criteria = more reliable scores. If you can't answer yes/no, break it up.
+
+criteria:
+  - id: criterion_one               # snake_case, matches key in evaluate()'s return dict
+    label: "Criterion One"          # short human label for dashboard
+    description: "TODO: what passes this criterion"
+
+  - id: criterion_two
+    label: "Criterion Two"
+    description: "TODO: what passes this criterion"
+
+  - id: criterion_three
+    label: "Criterion Three"
+    description: "TODO: what passes this criterion"

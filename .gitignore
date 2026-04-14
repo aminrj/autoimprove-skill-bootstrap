@@ -1,1 +1,16 @@
-/data/diagrams
+# Generated image/artifact output (can be large)
+experiments/diagrams/data/diagrams/
+experiments/*/data/generated/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Environment
+.env
+
+# Legacy (pre-refactor data dir at repo root)
+/data/

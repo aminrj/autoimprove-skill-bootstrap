@@ -1,0 +1,51 @@
+name: "Blog SEO Front Matter"
+description: "Optimize a prompt that generates SEO-compliant front matter for aminrj.com (Chirpy/Jekyll)"
+
+batch_size: 8          # posts per cycle (5 fixed validation + 3 rotating)
+interval_seconds: 90
+
+# What's being optimized: the prompt Claude uses to suggest SEO improvements
+# What's measured: 5 binary SEO criteria on Claude's suggestions
+
+source:
+  type: local_files
+  path: "~/git/aminrj.com/_posts"   # path to the Chirpy blog repo
+  pattern: "*.md"
+  validation_set_size: 5            # auto-selected on first run, fixed thereafter
+  sample_size: 8                    # total posts per cycle
+
+generator:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  # To use a local model instead:
+  # provider: ollama
+  # model: llama3.2:latest
+  # endpoint: http://localhost:11434
+
+evaluator:
+  provider: anthropic
+  model: claude-sonnet-4-6   # eval isolation: separate call, never sees the optimization prompt
+
+mutator:
+  model: claude-sonnet-4-6
+
+criteria:
+  - id: title_under_60
+    label: "Title ≤60 chars"
+    description: "title field is present, descriptive, and at most 60 characters long"
+
+  - id: description_120_160
+    label: "Description 120-160"
+    description: "description field is present and between 120 and 160 characters"
+
+  - id: single_h1
+    label: "Single H1"
+    description: "the suggestion recommends exactly one H1 heading (Chirpy renders title as H1)"
+
+  - id: images_have_alt
+    label: "Images have alt"
+    description: "all images have descriptive alt text (not empty, not 'image', 'screenshot', or 'photo')"
+
+  - id: internal_links
+    label: "≥2 Internal links"
+    description: "at least 2 internal links to other posts on the blog are suggested"
