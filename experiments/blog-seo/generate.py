@@ -44,13 +44,10 @@ def _get_client(provider: str, model: str, endpoint: str = None):
         return client
 
     elif provider == "ollama":
-        # For Ollama, we use the OpenAI client to interface with it
-        from openai import OpenAI
+        # For Ollama, we use the ollama library directly
+        from ollama import Client
 
-        client = OpenAI(
-            base_url=endpoint or "http://localhost:11434",
-            api_key="ollama",  # Ollama doesn't require an API key
-        )
+        client = Client(host=endpoint or "http://localhost:11434")
         _client_cache[cache_key] = client
         return client
 
@@ -132,12 +129,16 @@ POST FILE: {Path(topic).name}
             )
             text = response.content[0].text.strip()
         else:  # ollama
-            response = client.chat.completions.create(
+            response = client.chat(
                 model=model_name,
                 messages=[{"role": "user", "content": user_message}],
-                temperature=0.3,
+                stream=False,  # We'll do it synchronously
+                options={
+                    "temperature": 0.3,
+                },
             )
-            text = response.choices[0].message.content.strip()
+            # Extract content from the response structure
+            text = response["message"]["content"].strip()
 
         # Strip markdown fences if present
         if "`" in text:
@@ -150,4 +151,10 @@ POST FILE: {Path(topic).name}
         return None
     except Exception as e:
         print(f"    GEN ERROR ({Path(topic).name}): {e}")
+        return None
+    except Exception as e:
+        print(f"    GEN ERROR ({Path(topic).name}): {e}")
+        import traceback
+
+        traceback.print_exc()
         return None

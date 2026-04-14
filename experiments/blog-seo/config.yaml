@@ -1,7 +1,7 @@
 name: "Blog SEO Front Matter"
 description: "Optimize a prompt that generates SEO-compliant front matter for aminrj.com (Chirpy/Jekyll)"
 
-batch_size: 8          # posts per cycle (5 fixed validation + 3 rotating)
+batch_size: 5          # posts per cycle (5 fixed validation + 0 rotating)
 interval_seconds: 90
 
 # What's being optimized: the prompt Claude uses to suggest SEO improvements
@@ -9,10 +9,10 @@ interval_seconds: 90
 
 source:
   type: local_files
-  path: "/home/amine/git/aminrj.com/_posts"   # path to the Chirpy blog repo
+  path: "/home/amine/git/local-llms/autoimprove-skill-bootstrap/experiments/blog-seo/data/posts"   # test posts directory
   pattern: "*.md"
   validation_set_size: 5            # auto-selected on first run, fixed thereafter
-  sample_size: 8                    # total posts per cycle
+  sample_size: 5                    # total posts per cycle
 
 generator:
   # provider: anthropic
