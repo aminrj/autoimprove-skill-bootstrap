@@ -49,7 +49,7 @@ Optimizes a prompt that generates SEO-compliant front matter for [aminrj.com](ht
 
 ```bash
 # Install dependencies
-pip install anthropic google-genai python-dotenv pyyaml
+pip install -r requirements.txt
 
 # Set API keys
 cp .env.example .env  # then fill in your keys
@@ -124,6 +124,12 @@ generator:
   provider: ollama
   model: llava:13b          # or any model you have locally
   endpoint: http://localhost:11434
+```
+
+For the blog-seo experiment, when using Ollama as the generator provider, make sure to install the required dependencies:
+
+```bash
+pip install -r requirements.txt
 ```
 
 Then update `generate.py` to call the Ollama endpoint. The evaluator can stay on Claude,

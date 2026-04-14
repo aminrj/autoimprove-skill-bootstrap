@@ -9,7 +9,7 @@ interval_seconds: 90
 
 source:
   type: local_files
-  path: "~/git/aminrj.com/_posts"   # path to the Chirpy blog repo
+  path: "/home/amine/git/aminrj.com/_posts"   # path to the Chirpy blog repo
   pattern: "*.md"
   validation_set_size: 5            # auto-selected on first run, fixed thereafter
   sample_size: 8                    # total posts per cycle

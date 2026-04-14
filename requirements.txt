@@ -1,0 +1,5 @@
+# Core dependencies for autoimprove-skill-bootstrap
+anthropic>=0.20.0
+openai>=1.0.0
+pyyaml>=6.0.0
+python-dotenv>=1.0.0
